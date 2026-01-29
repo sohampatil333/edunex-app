@@ -34,7 +34,13 @@ import {
   Clock,
   FileText,
   Smile,
-  Rocket
+  Rocket,
+  Gamepad2,
+  MousePointer2,
+  Grid3x3,
+  Trophy,
+  Timer,
+  Brain
 } from 'lucide-react';
 
 /* EduNex - Gen Z Focused EdTech Platform
@@ -205,7 +211,7 @@ const getSimulationForCourse = (course) => {
   return { ...simData, title: `${course.title} Sim` };
 };
 
-// --- SUB-COMPONENTS ---
+// --- COMPONENTS ---
 
 const Button = ({ children, variant = "primary", className = "", onClick, icon: Icon }) => {
   const baseStyle = "px-6 py-3.5 rounded-2xl font-bold transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 shadow-sm";
@@ -598,6 +604,235 @@ function CourseVisualizer({ course, onBack }) {
   );
 }
 
+// --- GAME COMPONENTS ---
+
+function IQClickerGame() {
+  const [iq, setIq] = useState(85);
+  const [clickPower, setClickPower] = useState(1);
+  const [popups, setPopups] = useState([]);
+
+  const handleClick = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const newPopup = { id: Date.now(), x, y, val: clickPower };
+    setPopups(prev => [...prev, newPopup]);
+    setTimeout(() => setPopups(prev => prev.filter(p => p.id !== newPopup.id)), 1000);
+
+    setIq(p => p + clickPower);
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-8">
+       <div className="text-center">
+          <h2 className="text-4xl font-black text-gray-900 mb-2">Current IQ: {iq}</h2>
+          <p className="text-gray-500">Tap the brain to grow smarter!</p>
+       </div>
+       
+       <button 
+         onClick={handleClick}
+         className="relative group transition-transform active:scale-95"
+       >
+          <div className="w-48 h-48 bg-pink-100 rounded-full flex items-center justify-center shadow-2xl group-hover:shadow-pink-200 transition-all border-4 border-white relative overflow-hidden">
+             <Brain size={100} className="text-pink-500 drop-shadow-md group-hover:scale-110 transition-transform" />
+             {/* Floating Numbers */}
+             {popups.map(p => (
+               <div key={p.id} className="absolute text-xl font-bold text-pink-600 animate-out slide-out-to-top-10 fade-out duration-700" style={{ left: p.x, top: p.y }}>
+                 +{p.val}
+               </div>
+             ))}
+          </div>
+       </button>
+
+       <div className="flex gap-4">
+          <button 
+            disabled={iq < 100}
+            onClick={() => { setIq(i => i - 100); setClickPower(p => p + 1); }}
+            className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+          >
+             Buy Book (Cost: 100 IQ)
+          </button>
+       </div>
+    </div>
+  );
+}
+
+function MemoryMatchGame() {
+  const emojis = ['👻', '💀', '🤡', '👽', '🤖', '💩', '👾', '🤠'];
+  const [cards, setCards] = useState([]);
+  const [flipped, setFlipped] = useState([]);
+  const [matched, setMatched] = useState([]);
+
+  useEffect(() => {
+    const shuffled = [...emojis, ...emojis]
+      .sort(() => Math.random() - 0.5)
+      .map((emoji, id) => ({ id, emoji }));
+    setCards(shuffled);
+  }, []);
+
+  const handleCardClick = (index) => {
+    if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
+    
+    const newFlipped = [...flipped, index];
+    setFlipped(newFlipped);
+
+    if (newFlipped.length === 2) {
+      const [first, second] = newFlipped;
+      if (cards[first].emoji === cards[second].emoji) {
+        setMatched(prev => [...prev, first, second]);
+        setFlipped([]);
+      } else {
+        setTimeout(() => setFlipped([]), 1000);
+      }
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center">
+       <h2 className="text-2xl font-black mb-6">Vibe Match 🧩</h2>
+       <div className="grid grid-cols-4 gap-3">
+          {cards.map((card, index) => (
+             <button
+               key={index}
+               onClick={() => handleCardClick(index)}
+               className={`w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl flex items-center justify-center transition-all duration-300 transform ${
+                 flipped.includes(index) || matched.includes(index)
+                   ? 'bg-white shadow-lg rotate-0'
+                   : 'bg-violet-500 rotate-180'
+               }`}
+             >
+                {(flipped.includes(index) || matched.includes(index)) ? card.emoji : ''}
+             </button>
+          ))}
+       </div>
+       {matched.length === cards.length && matched.length > 0 && (
+         <div className="mt-6 text-green-600 font-bold animate-bounce">
+            Vibe Check Passed! 🎉
+         </div>
+       )}
+    </div>
+  );
+}
+
+function ReflexGame() {
+  const [score, setScore] = useState(0);
+  const [activeCell, setActiveCell] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (isPlaying && timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    } else if (timeLeft === 0) {
+      setIsPlaying(false);
+    }
+    return () => clearInterval(timer);
+  }, [isPlaying, timeLeft]);
+
+  const startGame = () => {
+    setScore(0);
+    setTimeLeft(30);
+    setIsPlaying(true);
+    spawnTarget();
+  };
+
+  const spawnTarget = () => {
+    const random = Math.floor(Math.random() * 16);
+    setActiveCell(random);
+  };
+
+  const handleCellClick = (index) => {
+    if (!isPlaying) return;
+    if (index === activeCell) {
+      setScore(s => s + 1);
+      spawnTarget();
+    } else {
+      setScore(s => Math.max(0, s - 1)); // Penalty
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-6">
+       <div className="flex justify-between w-64 font-bold text-gray-700">
+          <div className="flex items-center gap-2"><Trophy size={18} className="text-amber-500"/> {score}</div>
+          <div className="flex items-center gap-2"><Timer size={18} className="text-blue-500"/> {timeLeft}s</div>
+       </div>
+
+       <div className="grid grid-cols-4 gap-2 bg-gray-200 p-2 rounded-xl">
+          {[...Array(16)].map((_, i) => (
+             <div
+               key={i}
+               onMouseDown={() => handleCellClick(i)}
+               className={`w-14 h-14 rounded-lg transition-all duration-75 cursor-pointer ${
+                 activeCell === i && isPlaying
+                   ? 'bg-amber-400 scale-95 shadow-inner' 
+                   : 'bg-white hover:bg-gray-50'
+               }`}
+             ></div>
+          ))}
+       </div>
+
+       {!isPlaying && (
+         <button onClick={startGame} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">
+            {timeLeft === 0 ? 'Try Again' : 'Start Focus'}
+         </button>
+       )}
+    </div>
+  );
+}
+
+function GamesView() {
+  const [activeGame, setActiveGame] = useState(null);
+
+  const games = [
+    { id: 'clicker', title: 'IQ Clicker 🧠', desc: 'Tap to grow your brain!', color: 'bg-pink-500', bg: 'bg-pink-50', icon: MousePointer2 },
+    { id: 'memory', title: 'Vibe Match 🧩', desc: 'Find matching emojis.', color: 'bg-violet-500', bg: 'bg-violet-50', icon: Grid3x3 },
+    { id: 'reflex', title: 'Focus Flow ⚡', desc: 'Hit targets fast!', color: 'bg-amber-500', bg: 'bg-amber-50', icon: Zap },
+  ];
+
+  if (activeGame) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 min-h-[600px] flex flex-col">
+        <button onClick={() => setActiveGame(null)} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold self-start">
+          <ArrowRight className="rotate-180" size={20} /> Back to Arcade
+        </button>
+        <div className="flex-1 bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden relative">
+           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-500 via-violet-500 to-amber-500"></div>
+           {activeGame === 'clicker' && <IQClickerGame />}
+           {activeGame === 'memory' && <MemoryMatchGame />}
+           {activeGame === 'reflex' && <ReflexGame />}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+       <SectionTitle title="Chill Zone 🎮" subtitle="Take a break. Brain rot free guarantee." />
+       <div className="grid md:grid-cols-3 gap-8">
+          {games.map(game => (
+            <div key={game.id} onClick={() => setActiveGame(game.id)} className="cursor-pointer group relative overflow-hidden rounded-[2rem] bg-white p-8 shadow-xl transition-all hover:-translate-y-2 hover:shadow-2xl border border-gray-100">
+               <div className={`absolute -right-10 -top-10 h-40 w-40 rounded-full ${game.color} opacity-10 blur-3xl transition-all group-hover:scale-150 group-hover:opacity-20`}></div>
+               
+               <div className={`mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl ${game.bg} ${game.color.replace('bg-', 'text-')} shadow-sm group-hover:scale-110 transition-transform`}>
+                  <game.icon size={40} />
+               </div>
+               
+               <h3 className="mb-2 text-2xl font-black text-gray-900">{game.title}</h3>
+               <p className="text-gray-500 font-medium mb-8 leading-relaxed">{game.desc}</p>
+               
+               <div className="flex items-center gap-2 font-bold text-gray-400 group-hover:text-gray-900 transition-colors">
+                  Play Now <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+               </div>
+            </div>
+          ))}
+       </div>
+    </div>
+  );
+}
+
 // --- MAIN APP COMPONENT ---
 
 export default function App() {
@@ -668,6 +903,7 @@ export default function App() {
   const navLinks = [
     { id: 'home', label: 'Home', icon: Sparkles },
     { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'games', label: 'Chill Zone 🎮', icon: Gamepad2 },
     { id: 'career', label: 'Career Map', icon: TrendingUp },
     { id: 'community', label: 'Community', icon: Users },
   ];
@@ -991,6 +1227,9 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* VIEW: GAMES (CHILL ZONE) */}
+        {activeTab === 'games' && <GamesView />}
 
         {/* VIEW: CAREER MAP */}
         {activeTab === 'career' && (
