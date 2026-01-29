@@ -2,7 +2,7 @@
   "name": "edunex-app",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://sohampatil333_USERNAME.github.io/edunex-app",
+  "homepage": "https://sohampatil333.github.io/edunex-app/",
   "type": "module",
   "scripts": {
     "dev": "vite",
